@@ -1,39 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileText, Video, Briefcase, Users } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { TotalPosts } from "@/components/dashboard/TotalPosts"
+import { Videos } from "@/components/dashboard/Videos"
+import { Services } from "@/components/dashboard/Services"
+import { Pages } from "@/components/dashboard/Pages"
 
 export default function AdminDashboard() {
-  const stats = [
-    {
-      title: "Total Posts",
-      value: "124",
-      icon: FileText,
-      change: "+4.75%",
-      color: "text-blue-600"
-    },
-    {
-      title: "Videos",
-      value: "45",
-      icon: Video,
-      change: "+1.35%",
-      color: "text-green-600"
-    },
-    {
-      title: "Services",
-      value: "12",
-      icon: Briefcase,
-      change: "+2.45%",
-      color: "text-purple-600"
-    },
-    {
-      title: "Active Users",
-      value: "573",
-      icon: Users,
-      change: "+5.25%",
-      color: "text-orange-600"
-    }
-  ]
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -41,23 +12,10 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className={cn("h-4 w-4", stat.color)} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-green-600">{stat.change}</span>{" "}
-                from last month
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        <TotalPosts />
+        <Videos />
+        <Services />
+        <Pages />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

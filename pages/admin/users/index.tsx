@@ -16,7 +16,7 @@ interface Post {
   _id: number;
   title: string;
   status: string;
-  createdAt: string;
+  date: string;
   author: string;
 }
 
@@ -31,11 +31,7 @@ export default function PostsPage() {
         const response = await fetch('/api/posts'); // Adjust the API endpoint as needed
         if (!response.ok) throw new Error("Failed to fetch posts");
         const data = await response.json();
-        // Sort posts by createdAt in descending order (latest first)
-        const sortedPosts = data.sort((a: Post, b: Post) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        setPosts(sortedPosts);
+        setPosts(data); // Assuming the API returns an array of posts
       } catch (err) {
         // Type assertion to handle the error correctly
         if (err instanceof Error) {
@@ -72,15 +68,6 @@ export default function PostsPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
-  };
-
   if (loading) {
     return <div>Loading...</div>; // You can replace this with a loading spinner or skeleton
   }
@@ -92,7 +79,7 @@ export default function PostsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Posts</h1>
+        <h1 className="text-3xl font-bold">Users</h1>
         <Link href={"/admin/posts/new"}>
           <Button>
             <Plus className="mr-2 h-4 w-4" /> New Post
@@ -115,10 +102,7 @@ export default function PostsPage() {
             {posts.map((post) => (
               <TableRow key={post._id}>
                 <TableCell className="font-medium">
-                  <Link 
-                    href={`/admin/posts/${post._id}`} 
-                    className="hover:underline"
-                  >
+                  <Link href={`/admin/posts/${post._id}`} className="text-white hover:text-slate-300 hover:underline">
                     {post.title}
                   </Link>
                 </TableCell>
@@ -127,15 +111,15 @@ export default function PostsPage() {
                     className={cn(
                       "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
                       post.status === "Published"
-                        ? "bg-green-500 text-white"
-                        : "bg-green-800 text-yellow-100"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
                     )}
                   >
                     {post.status}
                   </span>
                 </TableCell>
-                <TableCell>{formatDate(post.createdAt)}</TableCell>
-                <TableCell>{post.author}</TableCell>
+                <TableCell>{post.date}</TableCell>
+                <TableCell className="">{post.author}</TableCell>
                 <TableCell className="text-right">
                   <Link href={`/admin/posts/${post._id}`}>
                     <Button variant="ghost" size="icon" aria-label="Edit post">

@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  admin-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3885:3000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
