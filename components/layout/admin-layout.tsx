@@ -1,154 +1,191 @@
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/router"
-import { cn } from "../../lib/utils"
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { cn } from "lib/utils";
 import {
   LayoutDashboard,
-  Video,
   FileText,
-  Briefcase,
-  Users,
-  File,
-  Menu,
   Settings,
+  Users,
+  Video,
+  Files,
+  Briefcase,
+  Menu,
+  X,
   ChevronLeft,
-} from "lucide-react"
-import { Button } from "../ui/button"
+  ChevronRight,
+} from "lucide-react";
+import { Button } from "components/ui/button";
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
-} from "../ui/sheet"
+} from "components/ui/sheet";
 
-const sidebarItems = [
+interface AdminLayoutProps {
+  children: React.ReactNode;
+}
+
+const menuItems = [
   {
     title: "Dashboard",
+    icon: LayoutDashboard,
     href: "/admin",
-    icon: LayoutDashboard
-  },
-  {
-    title: "Videos",
-    href: "/admin/videos",
-    icon: Video
   },
   {
     title: "Posts",
+    icon: FileText,
     href: "/admin/posts",
-    icon: FileText
-  },
-  {
-    title: "Services",
-    href: "/admin/services",
-    icon: Briefcase
-  },
-  {
-    title: "Users",
-    href: "/admin/users",
-    icon: Users
   },
   {
     title: "Pages",
+    icon: Files,
     href: "/admin/pages",
-    icon: File
+  },
+  {
+    title: "Services",
+    icon: Briefcase,
+    href: "/admin/services",
+  },
+  {
+    title: "Videos",
+    icon: Video,
+    href: "/admin/videos",
+  },
+  {
+    title: "Users",
+    icon: Users,
+    href: "/admin/users",
   },
   {
     title: "Settings",
+    icon: Settings,
     href: "/admin/settings",
-    icon: Settings
-  }
-]
+  },
+];
 
-export default function AdminLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(false)
-
-  const SidebarContent = () => (
-    <div className="space-y-4 py-4">
-      <div className="px-3 py-2">
-        <h2 className={cn(
-          "mb-2 px-4 text-lg font-semibold transition-opacity duration-200 text-white",
-          isCollapsed && "lg:opacity-0"
-        )}>
-          Admin Panel
-        </h2>
-        <div className="space-y-1">
-          {sidebarItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center rounded-md px-3 py-2.5 text-sm font-medium hover:bg-zinc-800 hover:text-white transition-colors text-zinc-400",
-                router.pathname === item.href ? "bg-zinc-800 text-white" : "transparent",
-                isCollapsed && "lg:justify-center lg:px-2"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-              <span className={cn(
-                "transition-opacity duration-200",
-                isCollapsed && "lg:hidden"
-              )}>
-                {item.title}
-              </span>
-            </Link>
-          ))}
-        </div>
+function SidebarContent({ className, isCollapsed }: { className?: string; isCollapsed: boolean }) {
+  const router = useRouter();
+  
+  return (
+    <div className={cn("flex h-full flex-col", className)}>
+      <div className="border-b px-6 py-4">
+        <Link href="/admin" className="flex items-center">
+          {!isCollapsed && <span className="text-xl font-bold">Admin Panel</span>}
+        </Link>
       </div>
+
+      <nav className="flex-1 space-y-1 p-4">
+        {menuItems.map((item) => {
+          const isActive = item.href === "/admin" 
+            ? router.pathname === "/admin" || router.pathname === "/admin/index"
+            : router.pathname.startsWith(item.href);
+          
+          const Icon = item.icon;
+          
+          return (
+            <Link key={item.href} href={item.href}>
+              <Button
+                variant={isActive ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-4 transition-all duration-200",
+                  isCollapsed && "justify-center px-2"
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {!isCollapsed && <span>{item.title}</span>}
+              </Button>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
-  )
+  );
+}
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar for desktop */}
-      <aside className={cn(
-        "hidden lg:block border-r bg-zinc-950 transition-all duration-300 ease-in-out relative mr-6",
-        isCollapsed ? "lg:w-16" : "lg:w-64"
-      )}>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute -right-6 top-4 hidden lg:flex h-8 w-8 z-50 rounded-full border shadow-md bg-background"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-        >
-          <ChevronLeft className={cn(
-            "h-4 w-4 transition-transform duration-200",
-            isCollapsed && "rotate-180"
-          )} />
-        </Button>
-        <div className="sticky top-0 h-screen overflow-y-auto">
-          <SidebarContent />
-        </div>
-      </aside>
+    <div className="min-h-screen bg-background">
+      {/* Mobile Menu Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed left-4 top-4 z-50 lg:hidden"
+        onClick={() => setIsMobileOpen(true)}
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
 
-      {/* Mobile sidebar */}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            className="lg:hidden fixed left-4 top-4 z-40"
-            size="icon"
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0 bg-zinc-900 border-r-zinc-800">
-          <SidebarContent />
+      {/* Mobile Sidebar */}
+      <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
+        <SheetContent side="left" className="w-[200px] p-0">
+          <SheetHeader className="px-4 py-4 border-b">
+            <SheetTitle className="flex items-center justify-between">
+              <span>Admin Panel</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </SheetTitle>
+          </SheetHeader>
+          <SidebarContent isCollapsed={false} />
         </SheetContent>
       </Sheet>
 
-      {/* Main content */}
-      <main className={cn(
-        "flex-1 overflow-y-auto transition-all duration-300 px-6",
-        !isCollapsed && "lg:ml-0"
-      )}>
-        <div className="container mx-auto py-6">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex">
+        <div
+          className={cn(
+            "fixed inset-y-0 z-50 flex transition-all duration-300",
+            isCollapsed ? "w-[60px]" : "w-[200px]"
+          )}
+        >
+          <div className="flex flex-1 flex-col bg-background border-r">
+            <SidebarContent isCollapsed={isCollapsed} />
+          </div>
+          
+          {/* Collapse Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute -right-4 top-[calc(50%-24px)] h-12 w-8 rounded-full border bg-background shadow-md"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+
+        {/* Main Content */}
+        <main
+          className={cn(
+            "flex-1 transition-all duration-300",
+            isCollapsed ? "ml-[60px]" : "ml-[200px]"
+          )}
+        >
+          <div className="container mx-auto p-8">
+            {children}
+          </div>
+        </main>
+      </div>
+
+      {/* Mobile Main Content */}
+      <main className="lg:hidden">
+        <div className="container mx-auto pl-8 pr-4 pt-16">
           {children}
         </div>
       </main>
     </div>
-  )
+  );
 }

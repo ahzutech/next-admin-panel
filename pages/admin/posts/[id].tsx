@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import RichTextEditor from "@/components/editor/rich-text-editor";
+import { Button } from "components/ui/button";
+import { Input } from "components/ui/input";
+import { Label } from "components/ui/label";
+import RichTextEditor from "components/editor/rich-text-editor";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Save, ArrowLeft, Upload, ImagePlus } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+} from "components/ui/select";
+import { Save, ArrowLeft, Upload, ImagePlus, X } from "lucide-react";
+import { Card, CardContent } from "components/ui/card";
+import Image from "next/image";
 
 interface Post {
   title: string;
@@ -24,12 +25,14 @@ interface Post {
   status: string;
   categories: string[];
   tags: string[];
+  image?: string;
 }
 
 export default function EditPost() {
   const router = useRouter();
   const { id } = router.query;
   const isNew = id === "new";
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [post, setPost] = useState<Post>({
     title: "",
@@ -43,6 +46,8 @@ export default function EditPost() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -53,6 +58,9 @@ export default function EditPost() {
           if (!response.ok) throw new Error("Failed to fetch post");
           const data = await response.json();
           setPost(data);
+          if (data.image) {
+            setImagePreview(data.image);
+          }
         } catch (error) {
           console.error("Error fetching post:", error);
           setError(error instanceof Error ? error.message : "Failed to fetch post");
@@ -69,17 +77,47 @@ export default function EditPost() {
     }
   }, [id, isNew]);
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
+      const formData = new FormData();
+      Object.entries(post).forEach(([key, value]) => {
+        if (key === 'categories' || key === 'tags') {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value);
+        }
+      });
+
+      if (selectedImage) {
+        formData.append('image', selectedImage);
+      }
+
       const method = isNew ? "POST" : "PUT";
       const response = await fetch(`/api/posts${isNew ? "" : `?id=${id}`}`, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(post),
+        body: formData,
       });
 
       if (!response.ok) throw new Error("Failed to submit post data");
@@ -226,22 +264,54 @@ export default function EditPost() {
                 />
               </div>
 
-              {isNew && (
-                <div className="mt-4">
-                  <div className="rounded-lg border-2 border-dashed p-6 text-center">
-                    <ImagePlus className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <div className="mt-4">
-                      <p className="text-sm text-muted-foreground">
-                        Upload featured image
-                      </p>
+              <div className="mt-4">
+                <div className="rounded-lg border-2 border-dashed p-6 text-center relative">
+                  {imagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="mx-auto max-h-48 w-auto object-contain"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-0 right-0"
+                        onClick={removeImage}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button type="button" variant="outline" className="mt-4">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Choose Image
-                    </Button>
-                  </div>
+                  ) : (
+                    <>
+                      <ImagePlus className="mx-auto h-12 w-12 text-muted-foreground" />
+                      <div className="mt-4">
+                        <p className="text-sm text-muted-foreground">
+                          Upload featured image
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Choose Image
+                  </Button>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -1,21 +1,45 @@
-// pages/api/posts/index.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
+import formidable from 'formidable';
+import fs from 'fs';
+import FormData from 'form-data';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 const apiUrl = 'https://api.cycoserve.com/v1/posts';
 
+interface FormidableFile extends formidable.File {
+  filepath: string;
+  originalFilename: string | null;
+  mimetype: string | null;
+}
+
+const parseForm = async (
+  req: NextApiRequest
+): Promise<{ fields: formidable.Fields; files: formidable.Files }> => {
+  return new Promise((resolve, reject) => {
+    const form = formidable({});
+    form.parse(req, (err, fields, files) => {
+      if (err) reject(err);
+      resolve({ fields, files });
+    });
+  });
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req;
-  const { id } = req.query; // Get the ID from the request query
+  const { id } = req.query;
 
   if (method === 'GET') {
     if (id) {
-      // If an ID is provided, fetch a single post
       try {
         const response = await axios.get(`${apiUrl}/${id}`);
-
         if (response.status === 200) {
-          return res.status(200).json(response.data); // Return the single post
+          return res.status(200).json(response.data);
         } else {
           return res.status(response.status).json({ message: 'Failed to retrieve post' });
         }
@@ -24,12 +48,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ message: 'Error fetching post' });
       }
     } else {
-      // If no ID is provided, fetch all posts
       try {
         const response = await axios.get(apiUrl);
-
         if (response.status === 200) {
-          return res.status(200).json(response.data); // Return the list of posts
+          return res.status(200).json(response.data);
         } else {
           return res.status(response.status).json({ message: 'Failed to retrieve posts' });
         }
@@ -38,41 +60,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ message: 'Error fetching posts' });
       }
     }
-  } else if (method === 'POST') {
+  } else if (method === 'POST' || method === 'PUT') {
     try {
-      const postData = req.body; // The new post data
+      const { fields, files } = await parseForm(req);
+      
+      // Create FormData for the API request
+      const formData = new FormData();
+      
+      // Add all fields to formData
+      Object.entries(fields).forEach(([key, value]) => {
+        const fieldValue = Array.isArray(value) ? value[0] : value;
+        if (fieldValue) {
+          formData.append(key, fieldValue);
+        }
+      });
 
-      // Make a request to your Express backend to create a new post
-      const response = await axios.post(apiUrl, postData);
+      // Add image if it exists
+      const imageFiles = files.image as formidable.File[];
+      if (imageFiles && imageFiles.length > 0) {
+        const imageFile = imageFiles[0] as FormidableFile;
+        const fileStream = fs.createReadStream(imageFile.filepath);
+        formData.append('image', fileStream, {
+          filename: imageFile.originalFilename || 'image',
+          contentType: imageFile.mimetype || 'application/octet-stream',
+        });
+      }
 
-      if (response.status === 201) {
-        return res.status(201).json(response.data); // Return the newly created post
+      // Make request to backend API
+      const requestConfig = {
+        method: method,
+        url: method === 'POST' ? apiUrl : `${apiUrl}/${id}`,
+        data: formData,
+        headers: formData.getHeaders(),
+      };
+
+      const response = await axios(requestConfig);
+
+      // Clean up temporary files
+      if (imageFiles && imageFiles.length > 0) {
+        const imageFile = imageFiles[0] as FormidableFile;
+        fs.unlinkSync(imageFile.filepath);
+      }
+
+      if (response.status === 200 || response.status === 201) {
+        return res.status(response.status).json(response.data);
       } else {
-        return res.status(response.status).json({ message: 'Failed to create post' });
+        return res.status(response.status).json({ message: 'Failed to save post' });
       }
     } catch (error) {
-      console.error('Error creating post:', error);
-      return res.status(500).json({ message: 'Error creating post' });
-    }
-  } else if (method === 'PUT') {
-    if (!id) {
-      return res.status(400).json({ message: 'Post ID is required' });
-    }
-
-    try {
-      const postData = req.body; // The updated post data
-
-      // Make a request to your Express backend to update the post
-      const response = await axios.put(`${apiUrl}/${id}`, postData);
-
-      if (response.status === 200) {
-        return res.status(200).json(response.data); // Return the updated post
-      } else {
-        return res.status(response.status).json({ message: 'Failed to update post' });
-      }
-    } catch (error) {
-      console.error('Error updating post:', error);
-      return res.status(500).json({ message: 'Error updating post' });
+      console.error('Error saving post:', error);
+      return res.status(500).json({ message: 'Error saving post' });
     }
   } else if (method === 'DELETE') {
     if (!id) {
@@ -80,11 +117,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      // Make a request to your Express backend to delete the post
       const response = await axios.delete(`${apiUrl}/${id}`);
-
       if (response.status === 204) {
-        return res.status(204).end(); // No content
+        return res.status(204).end();
       } else {
         return res.status(response.status).json({ message: 'Failed to delete post' });
       }

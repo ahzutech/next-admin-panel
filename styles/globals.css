@@ -49,16 +49,6 @@
   }
 }
 
-.custom-link {
-  color: #007BFF;
-  text-decoration: none;
-}
-
-.custom-link:hover {
-  color: #0056b3;
-  text-decoration: underline;
-}
-
 @layer base {
   * {
     @apply border-border;
@@ -66,6 +56,13 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
 }
 
 /* Editor Styles */
